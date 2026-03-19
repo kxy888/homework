@@ -1,22 +1,27 @@
 function fileBatchProcessor()
-    %创建主窗口
+
+    % 创建主窗口
     fig = figure('Name', '文件批量处理器', 'NumberTitle', 'off', ...
         'Position', [100, 100, 800, 600], 'MenuBar', 'none', 'Color', [0.94 0.94 0.94]);
+    
     % 初始化变量
     currentPath = pwd;
     handles = struct('fig', fig, 'path', currentPath);
+    
     % 路径选择区
     uicontrol('Style', 'text', 'String', '目标文件夹:', 'Position', [20, 550, 70, 20], ...
         'BackgroundColor', [0.94 0.94 0.94]);
     pathEdit = uicontrol('Style', 'edit', 'String', currentPath, 'Position', [100, 550, 600, 25]);
     uicontrol('Style', 'pushbutton', 'String', '浏览', 'Position', [710, 550, 60, 25], ...
         'Callback', @(~,~) set(pathEdit, 'String', uigetdir(get(pathEdit, 'String'))));
+    
     % 文件列表
     fileList = uicontrol('Style', 'listbox', 'Position', [20, 350, 760, 180], 'Max', 2);
     uicontrol('Style', 'pushbutton', 'String', '刷新', 'Position', [20, 320, 60, 25], ...
         'Callback', @(~,~) refreshList());
     uicontrol('Style', 'pushbutton', 'String', '全选', 'Position', [90, 320, 60, 25], ...
         'Callback', @(~,~) set(fileList, 'Value', 1:length(get(fileList, 'String'))));
+    
     % 功能选择（下拉菜单替代单选按钮组）
     uicontrol('Style', 'text', 'String', '功能:', 'Position', [20, 280, 40, 20], ...
         'BackgroundColor', [0.94 0.94 0.94]);
@@ -25,6 +30,7 @@ function fileBatchProcessor()
         '5.规律命名', '6.按时间创建命名', '7.处理子文件夹', ...
         '8.分类处理', '9.自动分类到文件夹', '10.提取合并文件'}, ...
         'Position', [70, 280, 150, 25]);
+    
     % 参数输入
     uicontrol('Style', 'text', 'String', '参数1:', 'Position', [240, 280, 50, 20], ...
         'BackgroundColor', [0.94 0.94 0.94]);
@@ -32,6 +38,7 @@ function fileBatchProcessor()
     uicontrol('Style', 'text', 'String', '参数2:', 'Position', [460, 280, 50, 20], ...
         'BackgroundColor', [0.94 0.94 0.94]);
     param2 = uicontrol('Style', 'edit', 'Position', [520, 280, 150, 25]);
+    
     % 选项
     subCheck = uicontrol('Style', 'checkbox', 'String', '含子文件夹', ...
         'Position', [20, 240, 90, 20], 'BackgroundColor', [0.94 0.94 0.94]);
@@ -39,14 +46,18 @@ function fileBatchProcessor()
         'Position', [120, 240, 90, 20], 'Value', 1, 'BackgroundColor', [0.94 0.94 0.94]);
     typeCheck = uicontrol('Style', 'checkbox', 'String', '按类型分类', ...
         'Position', [220, 240, 100, 20], 'BackgroundColor', [0.94 0.94 0.94]);
+    
     % 执行按钮
     uicontrol('Style', 'pushbutton', 'String', '执行', 'Position', [350, 200, 100, 40], ...
         'FontWeight', 'bold', 'BackgroundColor', [0.3 0.6 0.9], 'ForegroundColor', 'white', ...
         'Callback', @(~,~) execute());
+    
     % 状态栏
     status = uicontrol('Style', 'text', 'String', '就绪', 'Position', [20, 10, 300, 20], ...
         'ForegroundColor', [0.4 0.4 0.4], 'HorizontalAlignment', 'left');
+    
     refreshList();
+    
     % 嵌套函数
     function refreshList()
         p = get(pathEdit, 'String');
@@ -55,23 +66,27 @@ function fileBatchProcessor()
         set(fileList, 'String', {f.name}, 'Value', []);
         set(status, 'String', sprintf('找到 %d 个文件', length(f)));
     end
+
     function execute()
         p = get(pathEdit, 'String');
         if ~exist(p, 'dir'), msgbox('路径无效!', '错误', 'error'); return; end
+        
         func = get(funcPopup, 'Value');
         s1 = get(param1, 'String'); s2 = get(param2, 'String');
         preview = get(prevCheck, 'Value');
+        
         % 获取选中文件
         allFiles = get(fileList, 'String');
         sel = get(fileList, 'Value');
-        if isempty(sel) || strcmp(allFiles{1}, '路径无效'), files = {}; else files = allFiles(sel); end 
+        if isempty(sel) || strcmp(allFiles{1}, '路径无效'), files = {}; else files = allFiles(sel); end
+        
         try
             switch func
-                case 1, r = proc(files, @(f,n) [s1 f s2 n], preview);  % 加前后缀
-                case 2, r = proc(files, @(f,n) strrep(f,s1,s2), preview);  % 替换
-                case 3, r = proc(files, @(f,n) sprintf('%s_%03d',s1,n), preview, 1);  % 新名
-                case 4, r = dateProc(files, s1, preview);  % 日期命名
-                case 5, r = patternProc(files, s1, preview);  % 规律命名
+                case 1, r = proc(files, @(f,n) [s1 f s2 n], preview, p);  % 加前后缀
+                case 2, r = proc(files, @(f,n) strrep(f,s1,s2), preview, p);  % 替换
+                case 3, r = proc(files, @(f,n) sprintf('%s_%03d',s1,n), preview, p, 1);  % 新名
+                case 4, r = dateProc(files, s1, preview, p);  % 日期命名
+                case 5, r = patternProc(files, s1, preview, p);  % 规律命名
                 case 6, r = timeProc(files, p, preview);  % 按时间命名
                 case 7, r = subfolderProc(p, s1, preview);  % 子文件夹
                 case 8, r = classifyProc(p, files, get(typeCheck, 'Value'), preview);  % 分类
@@ -84,38 +99,45 @@ function fileBatchProcessor()
             msgbox(ME.message, '错误', 'error');
         end
     end
-    function r = proc(files, nameFunc, preview, keepExt)
+
+    % 关键修改：增加 p 作为输入参数
+    function r = proc(files, nameFunc, preview, p, keepExt)
         if isempty(files), files = getFiles(p); end
         r = {}; 
         for i = 1:length(files)
             [~, name, ext] = fileparts(files{i});
-            if nargin > 3 && keepExt, ext = ''; end
+            if nargin > 4 && keepExt, ext = ''; end
             newName = [nameFunc(name, i) ext];
-            r{end+1} = doRename(files{i}, newName, preview);
+            r{end+1} = doRename(files{i}, newName, preview, p);
         end
         r = join(r);
     end
-    function r = dateProc(files, base, preview)
+
+    % 关键修改：增加 p 作为输入参数
+    function r = dateProc(files, base, preview, p)
         if isempty(files), files = getFiles(p); end
         if isempty(base), base = 'file'; end
         r = {};
         for i = 1:length(files)
             [~, ~, ext] = fileparts(files{i});
             newName = sprintf('%s_%s%s', base, datestr(now+i-1, 'yyyymmdd'), ext);
-            r{end+1} = doRename(files{i}, newName, preview);
+            r{end+1} = doRename(files{i}, newName, preview, p);
         end
         r = join(r);
     end
-    function r = patternProc(files, names, preview)
+
+    % 关键修改：增加 p 作为输入参数
+    function r = patternProc(files, names, preview, p)
         if isempty(files), files = getFiles(p); end
         n = strsplit(names, {',', '，'}); n = strtrim(n);
         r = {};
         for i = 1:min(length(files), length(n))
             [~, ~, ext] = fileparts(files{i});
-            r{end+1} = doRename(files{i}, sprintf('file_%s%s', n{i}, ext), preview);
+            r{end+1} = doRename(files{i}, sprintf('file_%s%s', n{i}, ext), preview, p);
         end
         r = join(r);
     end
+
     function r = timeProc(files, folder, preview)
         if isempty(files)
             f = dir(fullfile(folder, '*.*')); f = f(~[f.isdir]);
@@ -127,10 +149,11 @@ function fileBatchProcessor()
             d = datestr(info.datenum, 'yyyymmdd');
             if ~strcmp(d, currDate), currDate = d; cnt = 1; else cnt = cnt + 1; end
             [~, ~, ext] = fileparts(files{i});
-            r{end+1} = doRename(files{i}, sprintf('%s_%03d%s', d, cnt, ext), preview);
+            r{end+1} = doRename(files{i}, sprintf('%s_%03d%s', d, cnt, ext), preview, folder);
         end
         r = join(r);
     end
+
     function r = subfolderProc(folder, mode, preview)
         d = dir(folder); d = d([d.isdir]); d = d(~ismember({d.name}, {'.', '..'}));
         r = {}; cnt = 0;
@@ -145,6 +168,7 @@ function fileBatchProcessor()
         end
         r = join(r);
     end
+
     function r = classifyProc(folder, files, byType, preview)
         if isempty(files), files = getFiles(folder); end
         if byType
@@ -164,10 +188,11 @@ function fileBatchProcessor()
                 end
             end
         else
-            r = proc(files, @(f,n) sprintf('file_%03d', n), preview);
+            r = proc(files, @(f,n) sprintf('file_%03d', n), preview, folder);
         end
         r = join(r);
     end
+
     function r = autoClassify(folder, files, pattern, preview)
         if isempty(files), files = getFiles(folder, 1); end
         if isempty(pattern), pattern = 'chinese'; end
@@ -192,11 +217,13 @@ function fileBatchProcessor()
         end
         r = join(r);
     end
+
     function r = extractProc(folder, includeSub, preview)
         tgt = fullfile(folder, '合并结果');
         if ~preview && ~exist(tgt, 'dir'), mkdir(tgt); end
         
-        if includeSub, allF = getFilesRecursive(folder); else allF = getFiles(folder); end   
+        if includeSub, allF = getFilesRecursive(folder); else allF = getFiles(folder); end
+        
         r = {};
         for i = 1:length(allF)
             if isstruct(allF{i})
@@ -205,7 +232,8 @@ function fileBatchProcessor()
             else
                 src = fullfile(folder, allF{i}); [~, fname, ext] = fileparts(allF{i});
                 folderName = '当前文件夹';
-            end 
+            end
+            
             newName = [fname ext];
             if exist(fullfile(tgt, newName), 'file')
                 newName = sprintf('%s_%s%s', fname, folderName, ext);
@@ -215,18 +243,20 @@ function fileBatchProcessor()
         end
         r = join(r);
     end
+
     function s = doRename(old, new, preview, baseFolder)
-        if nargin < 4, baseFolder = p; end
         oldPath = fullfile(baseFolder, old);
         newPath = fullfile(baseFolder, new);
         if ~preview, movefile(oldPath, newPath); end
         s = sprintf('%s -> %s', old, new);
     end
+
     function f = getFiles(folder, recursive)
         if nargin < 2, recursive = false; end
         if recursive, f = getFilesRecursive(folder); return; end
         d = dir(fullfile(folder, '*.*')); f = {d(~[d.isdir]).name};
     end
+
     function f = getFilesRecursive(folder)
         f = {}; d = dir(folder); d = d(~ismember({d.name}, {'.', '..'}));
         for i = 1:length(d)
@@ -239,6 +269,7 @@ function fileBatchProcessor()
             end
         end
     end
+
     function s = join(c), s = strjoin(c, '\n'); end
-    function out = iff(cond, a, b), if cond, out = a; else out = b; end, end
+    function out = iff(cond, a, b), if cond, out = a; else, out = b; end, end
 end
